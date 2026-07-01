@@ -29,20 +29,18 @@ export default function App() {
   return (
     <HelmetProvider>
       <BrowserRouter>
-        <Suspense fallback={<Layout><PageLoader /></Layout>}>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="generate" element={<Generate />} />
-              <Route path="faq" element={<FAQ />} />
-              <Route path="about" element={<About />} />
-              <Route path="contact" element={<Contact />} />
-              <Route path="privacy" element={<Privacy />} />
-              <Route path="terms" element={<Terms />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </Suspense>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Suspense fallback={<PageLoader />}><Home /></Suspense>} />
+            <Route path="generate" element={<Suspense fallback={<PageLoader />}><Generate /></Suspense>} />
+            <Route path="faq" element={<Suspense fallback={<PageLoader />}><FAQ /></Suspense>} />
+            <Route path="about" element={<Suspense fallback={<PageLoader />}><About /></Suspense>} />
+            <Route path="contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
+            <Route path="privacy" element={<Suspense fallback={<PageLoader />}><Privacy /></Suspense>} />
+            <Route path="terms" element={<Suspense fallback={<PageLoader />}><Terms /></Suspense>} />
+            <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
+          </Route>
+        </Routes>
       </BrowserRouter>
     </HelmetProvider>
   );

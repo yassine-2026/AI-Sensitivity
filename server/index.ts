@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import compression from "compression";
@@ -6,16 +6,29 @@ import rateLimit from "express-rate-limit";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 async function startServer() {
   const app = express();
+  const isProd = process.env.NODE_ENV === "production";
 
   // Security and performance middleware
   app.use(helmet({
-    contentSecurityPolicy: false, // Disabled for Vite HMR and local dev
-    crossOriginEmbedderPolicy: false
+    contentSecurityPolicy: isProd ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"],
+        workerSrc: ["'self'", "blob:"],
+        connectSrc: ["'self'", "https://huggingface.co", "https://cdn-lfs.huggingface.co"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com"],
+      }
+    } : false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false
   }));
+  
   app.use(cors());
   app.use(compression());
   app.use(express.json());
@@ -24,7 +37,7 @@ async function startServer() {
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // limit each IP to 100 requests per windowMs
-    message: "Too many requests from this IP, please try again later."
+    message: { error: "Too many requests from this IP, please try again later." }
   });
   app.use("/api", limiter);
 
@@ -40,7 +53,7 @@ async function startServer() {
   app.get("/api/config", (req, res) => {
     res.json({ 
       maintenance: false,
-      aiModelStatus: "pending_stage_2"
+      aiModelStatus: "active"
     });
   });
 
@@ -49,7 +62,7 @@ async function startServer() {
   });
 
   // Vite middleware for development or static serving for production
-  if (process.env.NODE_ENV !== "production") {
+  if (!isProd) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -57,14 +70,20 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { maxAge: '1y' }));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
+  // Global Error Handler
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error("Global Error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  });
+
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Server running on http://0.0.0.0:${PORT} in ${isProd ? 'production' : 'development'} mode`);
   });
 }
 
