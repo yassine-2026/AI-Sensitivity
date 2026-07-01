@@ -1,8 +1,9 @@
 import { useAIStore } from '@/store/aiStore';
+import { RecommendationEngine } from './core/RecommendationEngine';
 
 class AIManager {
   private worker: Worker | null = null;
-  private messageCallbacks: Map<string, (result: string) => void> = new Map();
+  private messageCallbacks: Map<string, {resolve: (res: string) => void, reject: (err: any) => void}> = new Map();
   private generateCounter = 0;
 
   public initialize() {
@@ -29,7 +30,15 @@ class AIManager {
         case 'GENERATE_RESULT':
           if (id && this.messageCallbacks.has(id)) {
             const cb = this.messageCallbacks.get(id);
-            if (cb) cb(result);
+            if (cb) {
+              try {
+                // Try parsing to format nicely, if it fails, just return raw string
+                const parsed = RecommendationEngine.parseResult(result);
+                cb.resolve(RecommendationEngine.formatForDisplay(parsed));
+              } catch (e) {
+                cb.resolve(result);
+              }
+            }
             this.messageCallbacks.delete(id);
           }
           break;
@@ -59,23 +68,9 @@ class AIManager {
       }
 
       const id = `gen_${this.generateCounter++}`;
-      
-      const prompt = `Calculate Free Fire sensitivity for: 
-      Device: ${specs.manufacturer} ${specs.deviceName}
-      RAM: ${specs.ram}GB
-      Processor: ${specs.processor}
-      Refresh Rate: ${specs.refreshRate}Hz
-      Screen Size: ${specs.screenSize} inches
-      Resolution: ${specs.resolution}
-      Target FPS: ${specs.fps}
-      Play Style: ${specs.playStyle}
-      
-      Provide general, redDot, scope2x, scope4x, sniperScope, and freeLook as numbers from 0 to 100 in JSON format.`;
+      const prompt = RecommendationEngine.buildPrompt(specs);
 
-      this.messageCallbacks.set(id, (result) => {
-        resolve(result);
-      });
-
+      this.messageCallbacks.set(id, { resolve, reject });
       this.worker.postMessage({ type: 'GENERATE', data: { prompt, id } });
     });
   }
