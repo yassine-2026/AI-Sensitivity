@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { Crosshair, Smartphone, Cpu, Activity, LayoutGrid } from 'lucide-react';
 import { DeviceSpecs } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
+import { aiManager } from '@/ai/AIManager';
 
 export const Generate = () => {
   const { t } = useTranslation();
@@ -29,16 +30,19 @@ export const Generate = () => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsGenerating(true);
     setResultMessage(null);
     
-    // Simulate generation delay
-    setTimeout(() => {
+    try {
+      const result = await aiManager.generateSensitivity(formData);
+      setResultMessage(result);
+    } catch (err: any) {
+      setResultMessage(`Error: ${err.message || 'Failed to generate settings. Please ensure the model is downloaded.'}`);
+    } finally {
       setIsGenerating(false);
-      setResultMessage(t('generate.msg'));
-    }, 1500);
+    }
   };
 
   return (
@@ -158,9 +162,12 @@ export const Generate = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-center font-medium"
+                className="mt-6 p-6 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 text-left font-medium"
               >
-                {resultMessage}
+                <h3 className="text-lg font-bold mb-4 text-indigo-900 dark:text-indigo-300">Generated Settings</h3>
+                <pre className="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200 font-mono overflow-auto max-h-96">
+                  {resultMessage}
+                </pre>
               </motion.div>
             )}
           </form>

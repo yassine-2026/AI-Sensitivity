@@ -2,9 +2,11 @@ import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
+import { AIStatusOverlay } from './AIStatusOverlay';
 import { useAppStore } from '@/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation } from 'react-router-dom';
+import { aiManager } from '@/ai/AIManager';
 
 export const Layout = () => {
   const { theme, language } = useAppStore();
@@ -22,6 +24,11 @@ export const Layout = () => {
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [language]);
+  
+  useEffect(() => {
+    // Initialize AI manager to start downloading model in background
+    aiManager.initialize();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
@@ -39,6 +46,8 @@ export const Layout = () => {
         </motion.main>
       </AnimatePresence>
       <Footer />
+      <AIStatusOverlay />
     </div>
   );
 };
+
